@@ -2,104 +2,81 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
-from textblob import TextBlob
+from transformers import pipeline
 
-# -----------------------
-# Load Data Function
-# -----------------------
-@st.cache_data
-def load_data():
-    # File ko app.py ke sath rakho
-    df = pd.read_csv("Copy of Myntra.csv")
-    return df
-
-# -----------------------
-# Sentiment Function
-# -----------------------
-def get_sentiment(text):
-    analysis = TextBlob(str(text))
-    polarity = analysis.sentiment.polarity
-    if polarity > 0:
-        return "Positive"
-    elif polarity < 0:
-        return "Negative"
-    else:
-        return "Neutral"
-
-# -----------------------
-# WordCloud Function
-# -----------------------
-def generate_wordcloud(text, title):
-    wc = WordCloud(
-        width=800,
-        height=400,
-        background_color="white",
-        colormap="viridis",
-        collocations=False
-    ).generate(" ".join(text))
-    plt.figure(figsize=(8, 4))
-    plt.imshow(wc, interpolation="bilinear")
-    plt.axis("off")
-    plt.title(title, fontsize=16)
-    st.pyplot(plt)
-
-# -----------------------
-# Streamlit App
-# -----------------------
+# ---------------------------
+# Page Title
+# ---------------------------
 st.set_page_config(page_title="Myntra Sentiment Analysis", layout="wide")
 st.title("🛍️ Myntra Customer Reviews - Sentiment Analysis")
 
-# Load Data
-df = load_data()
+# ---------------------------
+# Upload Dataset
+# ---------------------------
+st.subheader("📂 Upload Dataset")
+uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
 
-# Column names ko lowercase me convert karte hain
-df.columns = [col.lower() for col in df.columns]
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
 
-# Reviews aur sentiments check
-if "review" not in df.columns:
-    st.error("⚠️ Column `review` dataset me nahi mila. Kripya check karo.")
-else:
-    # Sentiment Analysis
-    df["sentiment"] = df["review"].apply(get_sentiment)
+    # Dataset Overview
+    st.subheader("📊 Dataset Overview")
+    st.write(df.head())
+    st.write("Dataset Shape:", df.shape)
+    st.write("Sentiment Distribution:")
+    st.bar_chart(df['sentiment'].value_counts())
 
-    # Show dataframe
-    st.subheader("📋 Dataset Preview")
-    st.dataframe(df.head())
+    # ---------------------------
+    # WordCloud - Positive & Negative
+    # ---------------------------
+    st.subheader("☁️ WordClouds")
 
-    # Sentiment Distribution
-    st.subheader("📊 Sentiment Distribution")
-    sentiment_counts = df["sentiment"].value_counts()
+    # Positive Reviews
+    positive_reviews = df[df['sentiment'] == 5]['review']
+    positive_text = " ".join(positive_reviews.astype(str))
 
-    fig, ax = plt.subplots()
-    sentiment_counts.plot(kind="bar", ax=ax, color=["green", "red", "gray"])
-    ax.set_title("Sentiment Counts")
-    ax.set_ylabel("Number of Reviews")
-    st.pyplot(fig)
+    wc_pos = WordCloud(width=800, height=400, background_color='white',
+                       colormap='Greens', stopwords='english').generate(positive_text)
 
-    # Word Clouds
-    st.subheader("☁️ Word Clouds")
-    positive_reviews = df[df["sentiment"] == "Positive"]["review"]
-    negative_reviews = df[df["sentiment"] == "Negative"]["review"]
+    st.markdown("**Positive Reviews WordCloud**")
+    fig1, ax1 = plt.subplots(figsize=(10,5))
+    ax1.imshow(wc_pos, interpolation='bilinear')
+    ax1.axis("off")
+    st.pyplot(fig1)
 
-    col1, col2 = st.columns(2)
-    with col1:
-        generate_wordcloud(positive_reviews, "Positive Reviews WordCloud")
-    with col2:
-        generate_wordcloud(negative_reviews, "Negative Reviews WordCloud")
+    # Negative Reviews
+    negative_reviews = df[df['sentiment'] == 1]['review']
+    negative_text = " ".join(negative_reviews.astype(str))
 
-    # Prediction Section
-    st.subheader("🔮 Sentiment Prediction")
-    user_input = st.text_area("Type a review to analyze its sentiment:")
+    wc_neg = WordCloud(width=800, height=400, background_color='white',
+                       colormap='Reds', stopwords='english').generate(negative_text)
 
-    if st.button("Predict Sentiment"):
-        if user_input.strip() == "":
-            st.warning("⚠️ Please enter some text first!")
+    st.markdown("**Negative Reviews WordCloud**")
+    fig2, ax2 = plt.subplots(figsize=(10,5))
+    ax2.imshow(wc_neg, interpolation='bilinear')
+    ax2.axis("off")
+    st.pyplot(fig2)
+
+    # ---------------------------
+    # Sentiment Prediction
+    # ---------------------------
+    st.subheader("🤖 Try Your Own Review")
+
+    @st.cache_resource
+    def load_model():
+        return pipeline("sentiment-analysis")
+
+    sentiment_model = load_model()
+
+    user_input = st.text_area("✍️ Enter a review to analyze:")
+
+    if st.button("Predict"):
+        if user_input.strip():
+            prediction = sentiment_model(user_input)[0]
+            label = prediction['label']
+            score = prediction['score']
+            st.success(f"**Prediction:** {label} (Confidence: {score:.2f})")
         else:
-            prediction = get_sentiment(user_input)
-            if prediction == "Positive":
-                st.success(f"😊 Sentiment: **{prediction}**")
-            elif prediction == "Negative":
-                st.error(f"😡 Sentiment: **{prediction}**")
-            else:
-                st.info(f"😐 Sentiment: **{prediction}**")
-
+            st.warning("⚠️ Please enter a review text before predicting.")
+else:
+    st.info("Please upload a dataset to continue.")
