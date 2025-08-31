@@ -47,20 +47,7 @@ def normalize_sentiment_column(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df["sentiment_std"] = df["sentiment"].map(_map)
 
-    # 🔥 strict normalization to avoid mismatch
-    df["sentiment_std"] = df["sentiment_std"].replace({
-        "NEG": "NEGATIVE",
-        "negative": "NEGATIVE",
-        "NEGATIVE": "NEGATIVE",
-        "POS": "POSITIVE",
-        "positive": "POSITIVE",
-        "POSITIVE": "POSITIVE",
-        "NEU": "NEUTRAL",
-        "neutral": "NEUTRAL",
-        "NEUTRAL": "NEUTRAL",
-    })
-
-    return df
+    
 
 
 # ===============================
@@ -171,16 +158,47 @@ if df is not None:
             st.pyplot(fig)
 
 # ---- WordClouds (ONLY POSITIVE & NEGATIVE) ----
-if df is not None and "sentiment_std" in df.columns:
-    st.header("☁️ Wordclouds")
-    st.write("Sentiment counts after normalization:", df["sentiment_std"].value_counts())
+# ==============================
+# WordClouds Section
+# ==============================
 
-    col1, col2 = st.columns(2)
-    with col1:
-        make_wordcloud(df[df["sentiment_std"] == "POSITIVE"]["review"], "Positive Reviews", cmap="Greens")
+st.markdown("## ☁️ Wordclouds")
 
-    with col2:
-        make_wordcloud(df[df["sentiment_std"] == "NEGATIVE"]["review"], "Negative Reviews", cmap="Reds")
+# Sentiment counts
+sentiment_counts = df['sentiment'].value_counts().reset_index()
+sentiment_counts.columns = ['sentiment', 'count']
+st.write("Sentiment counts after normalization:")
+st.dataframe(sentiment_counts)
+
+# Sentiment-wise reviews
+neg_reviews = " ".join(df[df["sentiment"] == 1]["review"].astype(str))
+neu_reviews = " ".join(df[df["sentiment"] == 3]["review"].astype(str))
+pos_reviews = " ".join(df[df["sentiment"] == 5]["review"].astype(str))
+
+# WordCloud generator function
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+
+def generate_wordcloud(text, title, colormap):
+    if text.strip() == "":
+        st.warning(f"No data for {title} Reviews")
+    else:
+        wc = WordCloud(width=800, height=400, background_color='white',
+                       stopwords='english', colormap=colormap).generate(text)
+        fig, ax = plt.subplots(figsize=(10,5))
+        ax.imshow(wc, interpolation='bilinear')
+        ax.axis("off")
+        st.pyplot(fig)
+
+# Display Wordclouds
+st.markdown("### Positive Reviews")
+generate_wordcloud(pos_reviews, "Positive", "Greens")
+
+st.markdown("### Neutral Reviews")
+generate_wordcloud(neu_reviews, "Neutral", "Blues")
+
+st.markdown("### Negative Reviews")
+generate_wordcloud(neg_reviews, "Negative", "Reds")
 
 # ---- Single Prediction ----
 st.header("🧪 Try a Review")
