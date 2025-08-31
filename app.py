@@ -2,93 +2,104 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
-from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.metrics import accuracy_score
+from textblob import TextBlob
 
-# -------------------------------
-# Load Dataset
-# -------------------------------
+# -----------------------
+# Load Data Function
+# -----------------------
 @st.cache_data
 def load_data():
-    df = pd.read_csv("myntra_reviews.csv")   # apna dataset ka naam yahan rakho
-    df.columns = [col.lower() for col in df.columns]  # ✅ make all columns lowercase
+    # File ko app.py ke sath rakho
+    df = pd.read_csv("Copy of Myntra.csv")
     return df
 
-# -------------------------------
-# Train Model
-# -------------------------------
-@st.cache_resource
-def train_model(df):
-    X = df['review']
-    y = df['sentiment']
+# -----------------------
+# Sentiment Function
+# -----------------------
+def get_sentiment(text):
+    analysis = TextBlob(str(text))
+    polarity = analysis.sentiment.polarity
+    if polarity > 0:
+        return "Positive"
+    elif polarity < 0:
+        return "Negative"
+    else:
+        return "Neutral"
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
-
-    vectorizer = CountVectorizer(stop_words="english")
-    X_train_vec = vectorizer.fit_transform(X_train)
-    X_test_vec = vectorizer.transform(X_test)
-
-    model = MultinomialNB()
-    model.fit(X_train_vec, y_train)
-
-    y_pred = model.predict(X_test_vec)
-    acc = accuracy_score(y_test, y_pred)
-
-    return model, vectorizer, acc
-
-# -------------------------------
-# Generate WordCloud
-# -------------------------------
-def plot_wordcloud(text, title):
-    wordcloud = WordCloud(width=800, height=400, background_color="white").generate(" ".join(text))
-    plt.figure(figsize=(10, 5))
-    plt.imshow(wordcloud, interpolation="bilinear")
+# -----------------------
+# WordCloud Function
+# -----------------------
+def generate_wordcloud(text, title):
+    wc = WordCloud(
+        width=800,
+        height=400,
+        background_color="white",
+        colormap="viridis",
+        collocations=False
+    ).generate(" ".join(text))
+    plt.figure(figsize=(8, 4))
+    plt.imshow(wc, interpolation="bilinear")
     plt.axis("off")
     plt.title(title, fontsize=16)
     st.pyplot(plt)
 
-# -------------------------------
+# -----------------------
 # Streamlit App
-# -------------------------------
+# -----------------------
+st.set_page_config(page_title="Myntra Sentiment Analysis", layout="wide")
 st.title("🛍️ Myntra Customer Reviews - Sentiment Analysis")
 
-# Load data
+# Load Data
 df = load_data()
 
-# Sidebar
-st.sidebar.header("Dataset Preview")
-if st.sidebar.checkbox("Show Raw Data"):
-    st.write(df.head())
+# Column names ko lowercase me convert karte hain
+df.columns = [col.lower() for col in df.columns]
 
-# Train model
-model, vectorizer, accuracy = train_model(df)
-st.sidebar.success(f"Model trained with accuracy: {accuracy:.2f}")
+# Reviews aur sentiments check
+if "review" not in df.columns:
+    st.error("⚠️ Column `review` dataset me nahi mila. Kripya check karo.")
+else:
+    # Sentiment Analysis
+    df["sentiment"] = df["review"].apply(get_sentiment)
 
-# -------------------------------
-# Word Clouds
-# -------------------------------
-st.subheader("Positive Reviews WordCloud")
-positive_reviews = df[df['sentiment'] == "positive"]['review']
-plot_wordcloud(positive_reviews, "Positive Reviews")
+    # Show dataframe
+    st.subheader("📋 Dataset Preview")
+    st.dataframe(df.head())
 
-st.subheader("Negative Reviews WordCloud")
-negative_reviews = df[df['sentiment'] == "negative"]['review']
-plot_wordcloud(negative_reviews, "Negative Reviews")
+    # Sentiment Distribution
+    st.subheader("📊 Sentiment Distribution")
+    sentiment_counts = df["sentiment"].value_counts()
 
-# -------------------------------
-# Prediction
-# -------------------------------
-st.subheader("🔮 Predict Sentiment of Your Review")
-user_input = st.text_area("Enter your review here:")
+    fig, ax = plt.subplots()
+    sentiment_counts.plot(kind="bar", ax=ax, color=["green", "red", "gray"])
+    ax.set_title("Sentiment Counts")
+    ax.set_ylabel("Number of Reviews")
+    st.pyplot(fig)
 
-if st.button("Predict Sentiment"):
-    if user_input.strip():
-        user_vec = vectorizer.transform([user_input])
-        prediction = model.predict(user_vec)[0]
-        st.success(f"Predicted sentiment: **{prediction.lower()}**")  # ✅ lowercase output
-    else:
-        st.warning("Please enter a review text.")
+    # Word Clouds
+    st.subheader("☁️ Word Clouds")
+    positive_reviews = df[df["sentiment"] == "Positive"]["review"]
+    negative_reviews = df[df["sentiment"] == "Negative"]["review"]
+
+    col1, col2 = st.columns(2)
+    with col1:
+        generate_wordcloud(positive_reviews, "Positive Reviews WordCloud")
+    with col2:
+        generate_wordcloud(negative_reviews, "Negative Reviews WordCloud")
+
+    # Prediction Section
+    st.subheader("🔮 Sentiment Prediction")
+    user_input = st.text_area("Type a review to analyze its sentiment:")
+
+    if st.button("Predict Sentiment"):
+        if user_input.strip() == "":
+            st.warning("⚠️ Please enter some text first!")
+        else:
+            prediction = get_sentiment(user_input)
+            if prediction == "Positive":
+                st.success(f"😊 Sentiment: **{prediction}**")
+            elif prediction == "Negative":
+                st.error(f"😡 Sentiment: **{prediction}**")
+            else:
+                st.info(f"😐 Sentiment: **{prediction}**")
+
