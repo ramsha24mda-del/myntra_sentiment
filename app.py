@@ -23,29 +23,6 @@ def load_csv(path: str):
 # ===============================
 # Normalize Sentiment Labels
 # ===============================
-def normalize_sentiment_column(df: pd.DataFrame) -> pd.DataFrame:
-    if "sentiment" not in df.columns:
-        return df
-
-    def _map(v):
-        if pd.isna(v):
-            return np.nan
-        if isinstance(v, (int, float, np.integer, np.floating)):
-            if v in [0, 1, 2]:
-                return {0: "NEGATIVE", 1: "POSITIVE", 2: "NEUTRAL"}[int(v)]
-            if v in [-1, 0, 1]:
-                return {-1: "NEGATIVE", 0: "NEUTRAL", 1: "POSITIVE"}[int(v)]
-        s = str(v).strip().lower()
-        if s in ["neg", "negative", "bad"]:
-            return "NEGATIVE"
-        if s in ["pos", "positive", "good"]:
-            return "POSITIVE"
-        if s in ["neu", "neutral"]:
-            return "NEUTRAL"
-        return s.upper()
-
-    df = df.copy()
-    df["sentiment_std"] = df["sentiment"].map(_map)
 
     
 
