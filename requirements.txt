@@ -1,6 +1,9 @@
+
 streamlit
 pandas
 matplotlib
 wordcloud
-transformers>=4.39.0
-torch>=2.1.0
+nltk
+scikit-learn
+joblib
+seaborn
