@@ -51,17 +51,60 @@ def normalize_sentiment_column(df: pd.DataFrame) -> pd.DataFrame:
 # ===============================
 #   Wordcloud Generator
 # ===============================
-def make_wordcloud(texts, title):
-    text_joined = " ".join(texts.astype(str).tolist())
-    if not text_joined.strip():
-        st.info(f"No text available for {title}.")
-        return
-    wc = WordCloud(width=1000, height=500, stopwords=STOPWORDS).generate(text_joined)
-    fig = plt.figure(figsize=(8, 4))
-    plt.imshow(wc, interpolation="bilinear")
-    plt.axis("off")
-    plt.title(title)
+import streamlit as st
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+
+st.header("📊 WordCloud of Reviews")
+
+# Sentiment values check karne ke liye (debugging ke liye ek baar run karke dekhna)
+st.write("Unique Sentiment Values:", df['sentiment'].unique())
+
+# --- All Reviews WordCloud ---
+all_text = " ".join(df['review'].astype(str))
+wc_all = WordCloud(width=900, height=500, background_color='black',
+                   colormap='Blues', max_words=100).generate(all_text)
+
+fig, ax = plt.subplots(figsize=(10, 5))
+ax.imshow(wc_all, interpolation="bilinear")
+ax.axis("off")
+st.subheader("🌐 All Reviews WordCloud")
+st.pyplot(fig)
+
+
+# --- Positive Reviews WordCloud ---
+# (⚡ yahan apne dataset ke label ke hisaab se "1" ya "Positive" rakho)
+pos_reviews = df[df['sentiment'] == 1]['review']   # agar string h to "Positive" likhna
+if not pos_reviews.empty:
+    pos_text = " ".join(pos_reviews.astype(str))
+    wc_pos = WordCloud(width=900, height=500, background_color='black',
+                       colormap='Greens', max_words=100).generate(pos_text)
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.imshow(wc_pos, interpolation="bilinear")
+    ax.axis("off")
+    st.subheader("🟢 Positive Reviews WordCloud")
     st.pyplot(fig)
+else:
+    st.info("No positive reviews found.")
+
+
+# --- Negative Reviews WordCloud ---
+# (⚡ yahan apne dataset ke label ke hisaab se "0" ya "Negative" rakho)
+neg_reviews = df[df['sentiment'] == 0]['review']   # agar string h to "Negative" likhna
+if not neg_reviews.empty:
+    neg_text = " ".join(neg_reviews.astype(str))
+    wc_neg = WordCloud(width=900, height=500, background_color='black',
+                       colormap='Reds', max_words=100).generate(neg_text)
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.imshow(wc_neg, interpolation="bilinear")
+    ax.axis("off")
+    st.subheader("🔴 Negative Reviews WordCloud")
+    st.pyplot(fig)
+else:
+    st.info("No negative reviews found.")
+
 
 # ===============================
 #   Predict One Review
