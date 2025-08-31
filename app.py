@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from wordcloud import WordCloud, STOPWORDS
+from wordcloud import WordCloud
 
 # ===============================
 #   Load BERT Sentiment Pipeline
@@ -91,7 +91,8 @@ st.title("👜 Myntra Reviews — BERT Sentiment Analysis")
 st.markdown(
     """
     Upload or use the default **Myntra.csv** dataset to explore reviews, 
-    generate wordclouds, and run **BERT-powered sentiment analysis**.
+    generate **Positive & Negative WordClouds**, 
+    and run **BERT-powered sentiment analysis**.
     """
 )
 
@@ -140,18 +141,15 @@ if df is not None:
             plt.ylabel("Count")
             st.pyplot(fig)
 
-        # ---- WordClouds ----
+        # ---- WordClouds (ONLY POSITIVE & NEGATIVE) ----
         st.header("☁️ Wordclouds")
         st.write("Unique Sentiment Values:", df["sentiment"].unique())
 
-        col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns(2)
         with col1:
-            make_wordcloud(df["review"], "All Reviews", cmap="Blues")
-        if "sentiment_std" in df.columns:
-            with col2:
-                make_wordcloud(df[df["sentiment_std"] == "POSITIVE"]["review"], "Positive Reviews", cmap="Greens")
-            with col3:
-                make_wordcloud(df[df["sentiment_std"] == "NEGATIVE"]["review"], "Negative Reviews", cmap="Reds")
+            make_wordcloud(df[df["sentiment_std"] == "POSITIVE"]["review"], "Positive Reviews", cmap="Greens")
+        with col2:
+            make_wordcloud(df[df["sentiment_std"] == "NEGATIVE"]["review"], "Negative Reviews", cmap="Reds")
 
 # ---- Single Prediction ----
 st.header("🧪 Try a Review")
