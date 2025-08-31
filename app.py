@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud, STOPWORDS
-from functools import lru_cache
 
 # ===============================
 #   Load BERT Sentiment Pipeline
@@ -49,62 +48,23 @@ def normalize_sentiment_column(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 # ===============================
-#   Wordcloud Generator
+#   Wordcloud Helper
 # ===============================
-import streamlit as st
-import matplotlib.pyplot as plt
-from wordcloud import WordCloud
-
-st.header("📊 WordCloud of Reviews")
-
-# Sentiment values check karne ke liye (debugging ke liye ek baar run karke dekhna)
-st.write("Unique Sentiment Values:", df['sentiment'].unique())
-
-# --- All Reviews WordCloud ---
-all_text = " ".join(df['review'].astype(str))
-wc_all = WordCloud(width=900, height=500, background_color='black',
-                   colormap='Blues', max_words=100).generate(all_text)
-
-fig, ax = plt.subplots(figsize=(10, 5))
-ax.imshow(wc_all, interpolation="bilinear")
-ax.axis("off")
-st.subheader("🌐 All Reviews WordCloud")
-st.pyplot(fig)
-
-
-# --- Positive Reviews WordCloud ---
-# (⚡ yahan apne dataset ke label ke hisaab se "1" ya "Positive" rakho)
-pos_reviews = df[df['sentiment'] == 1]['review']   # agar string h to "Positive" likhna
-if not pos_reviews.empty:
-    pos_text = " ".join(pos_reviews.astype(str))
-    wc_pos = WordCloud(width=900, height=500, background_color='black',
-                       colormap='Greens', max_words=100).generate(pos_text)
+def make_wordcloud(series, title, cmap="Blues"):
+    if series.empty:
+        st.info(f"No data for {title}")
+        return
+    text = " ".join(series.dropna().astype(str))
+    wc = WordCloud(
+        width=900, height=500, background_color="black",
+        colormap=cmap, max_words=100
+    ).generate(text)
 
     fig, ax = plt.subplots(figsize=(10, 5))
-    ax.imshow(wc_pos, interpolation="bilinear")
+    ax.imshow(wc, interpolation="bilinear")
     ax.axis("off")
-    st.subheader("🟢 Positive Reviews WordCloud")
+    st.subheader(title)
     st.pyplot(fig)
-else:
-    st.info("No positive reviews found.")
-
-
-# --- Negative Reviews WordCloud ---
-# (⚡ yahan apne dataset ke label ke hisaab se "0" ya "Negative" rakho)
-neg_reviews = df[df['sentiment'] == 0]['review']   # agar string h to "Negative" likhna
-if not neg_reviews.empty:
-    neg_text = " ".join(neg_reviews.astype(str))
-    wc_neg = WordCloud(width=900, height=500, background_color='black',
-                       colormap='Reds', max_words=100).generate(neg_text)
-
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.imshow(wc_neg, interpolation="bilinear")
-    ax.axis("off")
-    st.subheader("🔴 Negative Reviews WordCloud")
-    st.pyplot(fig)
-else:
-    st.info("No negative reviews found.")
-
 
 # ===============================
 #   Predict One Review
@@ -180,15 +140,18 @@ if df is not None:
             plt.ylabel("Count")
             st.pyplot(fig)
 
+        # ---- WordClouds ----
         st.header("☁️ Wordclouds")
+        st.write("Unique Sentiment Values:", df["sentiment"].unique())
+
         col1, col2, col3 = st.columns(3)
         with col1:
-            make_wordcloud(df["review"], "All Reviews")
+            make_wordcloud(df["review"], "All Reviews", cmap="Blues")
         if "sentiment_std" in df.columns:
             with col2:
-                make_wordcloud(df[df["sentiment_std"] == "POSITIVE"]["review"], "Positive Reviews")
+                make_wordcloud(df[df["sentiment_std"] == "POSITIVE"]["review"], "Positive Reviews", cmap="Greens")
             with col3:
-                make_wordcloud(df[df["sentiment_std"] == "NEGATIVE"]["review"], "Negative Reviews")
+                make_wordcloud(df[df["sentiment_std"] == "NEGATIVE"]["review"], "Negative Reviews", cmap="Reds")
 
 # ---- Single Prediction ----
 st.header("🧪 Try a Review")
