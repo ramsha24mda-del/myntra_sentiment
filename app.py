@@ -39,7 +39,7 @@ if uploaded_file is not None:
                        colormap='Greens', stopwords='english').generate(positive_text)
 
     st.markdown("**Positive Reviews WordCloud**")
-    fig1, ax1 = plt.subplots(figsize=(10,5))
+    fig1, ax1 = plt.subplots(figsize=(10, 5))
     ax1.imshow(wc_pos, interpolation='bilinear')
     ax1.axis("off")
     st.pyplot(fig1)
@@ -52,7 +52,7 @@ if uploaded_file is not None:
                        colormap='Reds', stopwords='english').generate(negative_text)
 
     st.markdown("**Negative Reviews WordCloud**")
-    fig2, ax2 = plt.subplots(figsize=(10,5))
+    fig2, ax2 = plt.subplots(figsize=(10, 5))
     ax2.imshow(wc_neg, interpolation='bilinear')
     ax2.axis("off")
     st.pyplot(fig2)
@@ -64,7 +64,8 @@ if uploaded_file is not None:
 
     @st.cache_resource
     def load_model():
-        return pipeline("sentiment-analysis")
+        # Lightweight model (better for Streamlit Cloud)
+        return pipeline("sentiment-analysis", model="finiteautomata/bertweet-base-sentiment-analysis")
 
     sentiment_model = load_model()
 
